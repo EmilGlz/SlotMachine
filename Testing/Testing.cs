@@ -8,17 +8,20 @@ namespace Testing
         [Fact]
         public void CheckValues()
         {
-            var reelConfig = new MockReelConfig();
-            var paytableConfig = new MockPaytableConfig();
+            for (int i = 0; i < MockDatas.ReelBands.Count; i++)
+            {
+                var reelConfig = new MockReelConfig(MockDatas.ReelBands[i], MockDatas.StopPositions[i]);
+                var paytableConfig = new MockPaytableConfig();
 
-            var slotMachineService = new SlotMachineService(reelConfig);
-            var payoutService = new PayoutService(paytableConfig);
+                var slotMachineService = new SlotMachineService(reelConfig);
+                var payoutService = new PayoutService(paytableConfig);
 
-            var spinResult = slotMachineService.SpinReels();
+                var spinResult = slotMachineService.SpinReels();
 
-            var totalWinnings = payoutService.CalculateWinnings(spinResult);
+                payoutService.CalculateWinnings(spinResult);
 
-            Assert.Equal(11, totalWinnings);
+                Assert.Equal(MockDatas.TotalWinningsResuls[i], spinResult.GetTotalWinnings());
+            }
         }
     }
 }

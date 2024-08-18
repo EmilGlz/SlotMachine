@@ -10,7 +10,7 @@
         {
             StopPositions = stopPositions;
             Screen = screen;
-            Wins = new List<WinDetails>();
+            Wins = new();
         }
 
         public void AddWin(WinDetails win)
@@ -18,25 +18,24 @@
             Wins.Add(win);
         }
 
-        public int CalculateTotalWinnings()
+        public int GetTotalWinnings()
         {
             return Wins.Sum(win => win.Payout);
+        }
+
+        public void PrintWinnings()
+        {
+            Console.WriteLine($"Total wins: {GetTotalWinnings()}");
+            foreach (var win in Wins)
+                Console.WriteLine($"- Ways win {string.Join("-", win.WinningPositions)}, {win.Symbol} x{win.MatchCount}, {win.Payout}");
         }
     }
 
     public class WinDetails
     {
-        public string Symbol { get; private set; }
-        public int MatchCount { get; private set; }
-        public int Payout { get; private set; }
-        public List<int> WinningPositions { get; private set; }
-
-        public WinDetails(string symbol, int matchCount, int payout, List<int> winningPositions)
-        {
-            Symbol = symbol;
-            MatchCount = matchCount;
-            Payout = payout;
-            WinningPositions = winningPositions;
-        }
+        public string Symbol { get; set; }
+        public int MatchCount { get; set; }
+        public int Payout { get; set; }
+        public List<int> WinningPositions { get; set; }
     }
 }

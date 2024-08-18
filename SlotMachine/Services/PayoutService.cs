@@ -1,5 +1,9 @@
 ﻿using SlotMachine.Contracts;
 using SlotMachine.Models;
+using SlotMachine.Utils;
+using System.Diagnostics;
+using System.Linq;
+using System.Net.Security;
 
 namespace SlotMachine.Services
 {
@@ -12,62 +16,124 @@ namespace SlotMachine.Services
             _config = paytableConfig;
         }
 
-        public int CalculateWinnings(SpinResult spinResult)
+        public void CalculateWinnings(SpinResult spinResult)
         {
-            var totalWinnings = 0;
-            Dictionary<int, List<string>> coloumnValues = new();
             var screen = spinResult.Screen;
-            var rowCount = screen.GetLength(0);
-            var coloumnCount = screen.GetLength(1);
-            // This loop is only to fill the elements to the dictionary so that we can see more clearly later
-            for (int i = 0; i < coloumnCount; i++)
+            var elementsOnScreen = GetUniqueElements(screen);
+            foreach (var element in elementsOnScreen)
             {
-                var elementsInColoumn = new List<string>();
-                for (int j = 0; j < rowCount; j++)
+                var positions = GetElementPositions(element, screen);
+                if (positions.Count < 3)
+                    continue;
+                var (combinations, keys) = GetCombinations(positions);
+                for (int j = 0; j < combinations.Count; j++)
                 {
-                    var symbol = screen[j, i];
-                    elementsInColoumn.Add(symbol);
+                    var rowIndexes = combinations[j];
+                    var coloumnIndexes = keys[j];
+                    List<int> winningPositions = new();
+                    var newWinDetails = new WinDetails
+                    {
+                        Symbol = element,
+                        MatchCount = coloumnIndexes.Count,
+                        Payout = _config.Paytable.GetPayout(element, coloumnIndexes.Count)
+                    };
+                    for (int k = 0; k < coloumnIndexes.Count; k++)
+                    {
+                        var index = GetIndex(rowIndexes[k], coloumnIndexes[k]);
+                        winningPositions.Add(index);
+                    }
+                    newWinDetails.WinningPositions = winningPositions;
+                    spinResult.AddWin(newWinDetails);
                 }
-                coloumnValues.Add(i, elementsInColoumn);
             }
-
-            foreach (var coloumnData in coloumnValues)
-            {
-                var elements = coloumnData.Value;
-                var coloumnIndex = coloumnData.Key;
-                if(coloumnValues.ContainsKey(coloumnIndex + 1)) // if we are not in the last coloumn
-                {
-                    // TODO check if there are more than one same element in one coloumn and the same element exists
-                    // on the next element, add to the list, and remove duplicated item from coloumn
-                }
-            }
-
-
-            foreach (var win in spinResult.Wins)
-            {
-                Console.WriteLine($"- Ways win {string.Join("-", win.WinningPositions)}, {win.Symbol} x{win.MatchCount}, {win.Payout}");
-            }
-
-            return totalWinnings;
         }
 
-        static void FindWinningCombinations(string[,] screen, int row, int col, string symbol, HashSet<int> visited, List<int> winningPositions)
+        private int GetIndex(int row, int coloumn)
+            => 5 * row + coloumn;
+
+        #region Methods for calculating combinations
+        private static HashSet<string> GetUniqueElements(string[,] matrix)
         {
-            int index = row * screen.GetLength(1) + col;
+            var uniqueElements = new HashSet<string>();
 
-            if (visited.Contains(index) || screen[row, col] != symbol)
-                return;
+            int rows = matrix.GetLength(0);
+            int cols = matrix.GetLength(1);
 
-            visited.Add(index);
-            winningPositions.Add(index);
-
-            if (col + 1 < screen.GetLength(1))
+            for (int row = 0; row < rows; row++)
             {
-                for (int nextRow = 0; nextRow < screen.GetLength(0); nextRow++)
+                for (int col = 0; col < cols; col++)
                 {
-                    FindWinningCombinations(screen, nextRow, col + 1, symbol, visited, winningPositions);
+                    uniqueElements.Add(matrix[row, col]);
                 }
             }
+
+            return uniqueElements;
         }
+        private static Dictionary<int, List<int>> GetElementPositions(string element, string[,] matrix)
+        {
+            var positions = new Dictionary<int, List<int>>();
+
+            int rows = matrix.GetLength(0);
+            int cols = matrix.GetLength(1);
+
+            for (int col = 0; col < cols; col++)
+            {
+                var rowList = new List<int>();
+                for (int row = 0; row < rows; row++)
+                {
+                    if (matrix[row, col] == element)
+                    {
+                        rowList.Add(row);
+                    }
+                }
+
+                if (rowList.Count > 0)
+                {
+                    positions[col] = rowList;
+                }
+                else if (positions.Count > 0 && rowList.Count == 0)
+                    break;
+            }
+
+            return positions;
+        }
+        private static (List<List<int>> combinations, List<List<int>> keys) GetCombinations(Dictionary<int, List<int>> positions)
+        {
+            var combinations = new List<List<int>>();
+            var keyTracking = new List<List<int>>();
+
+            var lists = new List<List<int>>(positions.Values);
+            var keyLists = new List<List<int>>();
+            foreach (var key in positions.Keys)
+            {
+                keyLists.Add(new List<int> { key });
+            }
+
+            void GenerateCombinations(int depth, List<int> currentCombination, List<int> currentKeys)
+            {
+                // Base case: if we've considered all lists
+                if (depth == lists.Count)
+                {
+                    combinations.Add(new List<int>(currentCombination));
+                    keyTracking.Add(new List<int>(currentKeys));
+                    return;
+                }
+
+                // Recursive case: iterate over each element in the current list
+                foreach (var item in lists[depth])
+                {
+                    currentCombination.Add(item);
+                    currentKeys.Add(keyLists[depth][0]); // Use the key corresponding to the current list
+                    GenerateCombinations(depth + 1, currentCombination, currentKeys);
+                    currentCombination.RemoveAt(currentCombination.Count - 1); // Backtrack
+                    currentKeys.RemoveAt(currentKeys.Count - 1); // Backtrack
+                }
+            }
+
+            GenerateCombinations(0, new List<int>(), new List<int>());
+
+            return (combinations, keyTracking);
+        }
+        #endregion
     }
 }

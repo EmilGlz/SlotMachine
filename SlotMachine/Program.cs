@@ -17,8 +17,8 @@ namespace SlotMachine
 
             slotMachineService.DisplayScreen(spinResult);
 
-            var totalWinnings = payoutService.CalculateWinnings(spinResult);
-            Console.WriteLine($"Total wins: {totalWinnings}");
+            payoutService.CalculateWinnings(spinResult);
+            spinResult.PrintWinnings();
         }
     }
 }

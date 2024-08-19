@@ -1,9 +1,5 @@
 ﻿using SlotMachine.Contracts;
 using SlotMachine.Models;
-using SlotMachine.Utils;
-using System.Diagnostics;
-using System.Linq;
-using System.Net.Security;
 
 namespace SlotMachine.Services
 {
@@ -69,19 +65,20 @@ namespace SlotMachine.Services
 
             return uniqueElements;
         }
-        private static Dictionary<int, List<int>> GetElementPositions(string element, string[,] matrix)
+
+        private static Dictionary<int, List<int>> GetElementPositions(string element, string[][] matrix)
         {
             var positions = new Dictionary<int, List<int>>();
 
             int rows = matrix.GetLength(0);
-            int cols = matrix.GetLength(1);
+            int cols = matrix[0].Length;
 
             for (int col = 0; col < cols; col++)
             {
                 var rowList = new List<int>();
                 for (int row = 0; row < rows; row++)
                 {
-                    if (matrix[row, col] == element)
+                    if (matrix[row][col] == element)
                     {
                         rowList.Add(row);
                     }
@@ -91,12 +88,39 @@ namespace SlotMachine.Services
                 {
                     positions[col] = rowList;
                 }
-                else if (positions.Count > 0 && rowList.Count == 0)
-                    break;
             }
+
+            positions = FilterSequentialPositions(positions);
 
             return positions;
         }
+
+        static Dictionary<int, List<int>> FilterSequentialPositions(Dictionary<int, List<int>> positions)
+        {
+            Dictionary<int, List<int>> sequentialPositions = new Dictionary<int, List<int>>();
+            List<int> tempKeys = new();
+
+            foreach (var key in positions.Keys.OrderBy(k => k))
+            {
+                if (tempKeys.Count == 0 || key == tempKeys.Last() + 1)
+                    tempKeys.Add(key);
+                else
+                {
+                    if (tempKeys.Count >= 3)
+                        foreach (var tempKey in tempKeys)
+                            sequentialPositions[tempKey] = positions[tempKey];
+                    tempKeys.Clear();
+                    tempKeys.Add(key);
+                }
+            }
+
+            if (tempKeys.Count >= 3)
+                foreach (var tempKey in tempKeys)
+                    sequentialPositions[tempKey] = positions[tempKey];
+
+            return sequentialPositions;
+        }
+
         private static (List<List<int>> combinations, List<List<int>> keys) GetCombinations(Dictionary<int, List<int>> positions)
         {
             var combinations = new List<List<int>>();

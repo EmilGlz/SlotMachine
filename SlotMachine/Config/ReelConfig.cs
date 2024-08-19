@@ -1,6 +1,5 @@
 ﻿using SlotMachine.Contracts;
 using SlotMachine.Models;
-using System;
 namespace SlotMachine.Config
 {
     public class ReelConfig : IReelConfig

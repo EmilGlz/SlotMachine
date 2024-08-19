@@ -66,19 +66,19 @@ namespace SlotMachine.Services
             return uniqueElements;
         }
 
-        private static Dictionary<int, List<int>> GetElementPositions(string element, string[][] matrix)
+        private static Dictionary<int, List<int>> GetElementPositions(string element, string[,] matrix)
         {
             var positions = new Dictionary<int, List<int>>();
 
             int rows = matrix.GetLength(0);
-            int cols = matrix[0].Length;
+            int cols = matrix.GetLength(1);
 
             for (int col = 0; col < cols; col++)
             {
                 var rowList = new List<int>();
                 for (int row = 0; row < rows; row++)
                 {
-                    if (matrix[row][col] == element)
+                    if (matrix[row,col] == element)
                     {
                         rowList.Add(row);
                     }
@@ -135,7 +135,6 @@ namespace SlotMachine.Services
 
             void GenerateCombinations(int depth, List<int> currentCombination, List<int> currentKeys)
             {
-                // Base case: if we've considered all lists
                 if (depth == lists.Count)
                 {
                     combinations.Add(new List<int>(currentCombination));
@@ -143,14 +142,13 @@ namespace SlotMachine.Services
                     return;
                 }
 
-                // Recursive case: iterate over each element in the current list
                 foreach (var item in lists[depth])
                 {
                     currentCombination.Add(item);
-                    currentKeys.Add(keyLists[depth][0]); // Use the key corresponding to the current list
+                    currentKeys.Add(keyLists[depth][0]); 
                     GenerateCombinations(depth + 1, currentCombination, currentKeys);
-                    currentCombination.RemoveAt(currentCombination.Count - 1); // Backtrack
-                    currentKeys.RemoveAt(currentKeys.Count - 1); // Backtrack
+                    currentCombination.RemoveAt(currentCombination.Count - 1); 
+                    currentKeys.RemoveAt(currentKeys.Count - 1);
                 }
             }
 
